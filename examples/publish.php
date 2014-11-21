@@ -13,35 +13,32 @@ $yunba->init(function ($success) {
 });
 
 //连接
-$yunba->connect(function ($success) {
+$yunba->connect(function ($success)  use ($yunba) {
 	if ($success) {
 		echo "[YunBa]connect success\n";
+
+		//发布消息到topic1
+		$yunba->publish(array(
+			"topic" => "topic1",
+			"qos" => 2,
+			"msg" => "Hello,World"	
+		), function ($success) {
+			echo "[YunBa]publish1 " . ($success ? "success" : "fail") . "\n";
+		});
+
+		//发布消息到topic2
+		/**$yunba->publish(array(
+				"topic" => "topic2",
+				"qos" => 2,
+				"msg" => "Hello,Girl"
+		), function ($success) {
+			echo "[YunBa]publish2 " . ($success ? "success" : "fail") . "\n";
+		});**/
 	}
 	else {
 		echo "[YunBa]connect fail\n";
 	}
 });
-
-//等待连接完毕
-sleep(1);
-
-//发布消息到topic1
-$yunba->publish(array(
-	"topic" => "topic1",
-	"qos" => 2,
-	"msg" => "Hello,World"	
-), function ($success) {
-	echo "[YunBa]publish1 " . ($success ? "success" : "fail") . "\n";
-});
-
-//发布消息到topic2
-/**$yunba->publish(array(
-		"topic" => "topic2",
-		"qos" => 2,
-		"msg" => "Hello,Girl"
-), function ($success) {
-	echo "[YunBa]publish2 " . ($success ? "success" : "fail") . "\n";
-});**/
 
 //等待通讯
 $yunba->wait();

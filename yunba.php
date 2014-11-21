@@ -74,10 +74,20 @@ class ElephantIOClient {
 	 * @access public
 	 */
 	public function keepAlive() {
-		while ( is_resource ( $this->fd ) ) {
-			if ($this->session ['heartbeat_timeout'] > 0 && $this->session ['heartbeat_timeout'] + $this->heartbeatStamp - 5 < time ()) {
-				$this->send ( self::TYPE_HEARTBEAT );
-				$this->heartbeatStamp = time ();
+		while ( is_resource ( $this->fd )) {
+			if ($this->session ['heartbeat_timeout'] > 0) {
+				$now = time();
+				if ($this->session ['heartbeat_timeout'] + $this->heartbeatStamp - 5 < $now)
+				{
+					$this->send ( self::TYPE_HEARTBEAT );
+					$this->heartbeatStamp = time ();
+				}
+
+				if (3 * $this->session ['heartbeat_timeout'] + $this->heartbeatAckStamp < $now)
+				{
+					// connection lost
+					break;
+				}
 			}
 			
 			$r = array (
@@ -85,10 +95,25 @@ class ElephantIOClient {
 			);
 			$w = $e = null;
 			
-			if (stream_select ( $r, $w, $e, 5 ) == 0)
+			if (false === ($num_changed_streams = stream_select ( $r, $w, $e, 5 )))
+			{
+				throw new Exception("Error Processing stream_select");
+			}
+			elseif($num_changed_streams === 0)
+			{
 				continue;
+			}
 			
+			if (feof($this->fd))
+			{
+				// stream closed
+				break;
+			}
+
 			$res = $this->read ();
+
+			$this->heartbeatAckStamp = time ();
+
 			$sess = explode ( ':', $res );
 			if (( int ) $sess [0] === self::TYPE_EVENT) {
 				unset ( $sess [0], $sess [1], $sess [2] );
@@ -399,7 +424,7 @@ class ElephantIOClient {
 		}
 		
 		// $this->send(self::TYPE_CONNECT);
-		$this->heartbeatStamp = time ();
+		$this->heartbeatAckStamp = $this->heartbeatStamp = time ();
 	}
 	
 	/**
@@ -604,6 +629,8 @@ class Yunba {
 	private $_server = "sock.yunba.io";
 	private $_port = 3000;
 	private $_appKey = "";
+	private $_autoReconnect = true;
+	private $_debug = false;
 	private $_qos0 = 0;
 	private $_qos1 = 1;
 	private $_qos2 = 2;
@@ -617,6 +644,7 @@ class Yunba {
 
 	private $_initCallback;
 	private $_recCallback;
+	private $_connectCallback;
 	private $_messageCallbacks = array();
 	
 	private $_callbacks = array();
@@ -645,8 +673,11 @@ class Yunba {
 		else {
 			throw new Exception("Need 'appkey' option");
 		}
-		
-		$this->_client = new ElephantIOClient("http://" . $this->_server . ":" . $this->_port, "socket.io", 1, false, true, isset($setup["debug"]) ? $setup["debug"] : false);
+
+		$this->_autoReconnect = isset($setup["auto_reconnect"]) ? $setup["auto_reconnect"] : true;
+		$this->_debug = isset($setup["debug"]) ? $setup["debug"] : false;
+
+		$this->_client = new ElephantIOClient("http://" . $this->_server . ":" . $this->_port, "socket.io", 1, false, true, $this->_debug);
 	}
 	
 	/**
@@ -682,9 +713,13 @@ class Yunba {
 	 * @param callable $callback 回调
 	 */
 	public function connect($callback = null) {
+		if (is_callable($callback)) {
+			$this->_connectCallback = $callback;
+		}
+
 		$this->emit("connect", array(
 			"appkey" => $this->_appKey
-		), $callback);
+		), $this->_connectCallback);
 	}
 	
 	/**
@@ -780,7 +815,35 @@ class Yunba {
 	 * 等待通讯
 	 */
 	public function wait() {
-		$this->_client->keepAlive();
+		while (true) {
+			if ($this->_client) {
+				$this->_client->keepAlive();
+			}
+
+			if ($this->_autoReconnect === false) {
+				break;
+			} else {
+				if ($this->_client) {
+					$this->_client->close();
+					$this->_client = null;
+				}
+
+				$this->_messageCallbacks = array();
+
+				try {
+					$this->_client = new ElephantIOClient("http://" . $this->_server . ":" . $this->_port, "socket.io", 1, false, true, $this->_debug);
+					$this->init();
+					$this->connect();
+				} catch (Exception $e) {
+					if ($this->_client) {
+						$this->_client->close();
+						$this->_client = null;
+					}
+
+					sleep(5);
+				}
+			}
+		}
 	}
 	
 	private function _fetchCallback() {
