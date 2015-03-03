@@ -634,6 +634,7 @@ class Yunba {
 	private $_qos0 = 0;
 	private $_qos1 = 1;
 	private $_qos2 = 2;
+	private $_sessionFilePath = "session.dat";
 	
 	/**
 	 * 客户端对象
@@ -665,13 +666,16 @@ class Yunba {
 			$this->_server = $setup["server"];
 		}
 		if (isset($setup["port"])) {
-			$this->_server = $setup["port"];
+			$this->_port = $setup["port"];
 		}
 		if (isset($setup["appkey"])) {
 			$this->_appKey = $setup["appkey"];
 		}
 		else {
 			throw new Exception("Need 'appkey' option");
+		}
+		if (isset($setup["sessionFilePath"])) {
+			$this->_sessionFilePath = $setup["sessionFilePath"];
 		}
 
 		$this->_autoReconnect = isset($setup["auto_reconnect"]) ? $setup["auto_reconnect"] : true;
@@ -720,6 +724,28 @@ class Yunba {
 		$this->emit("connect", array(
 			"appkey" => $this->_appKey
 		), $this->_connectCallback);
+	}
+
+	/**
+	 * 连接
+	 * 
+	 * @param callable $callback 回调
+	 */
+	public function connect_v2($callback = null) {
+		if (is_callable($callback)) {
+			$this->_connectCallback = $callback;
+		}
+
+		$sessionId = $this->_getSession();
+		if ($sessionId) {
+			$this->emit("connect", array(
+				"sessionid" => $sessionId
+			), $this->_connectCallback);
+		} else {
+			$this->emit("connect", array(
+				"appkey" => $this->_appKey
+			), $this->_connectCallback);
+		}
 	}
 	
 	/**
@@ -861,6 +887,10 @@ class Yunba {
 		if ($callback) {
 			call_user_func($callback, $data["success"], isset($data["msg"]) ? $data["msg"] : null);
 		}
+
+		if ($data["success"] && isset($data["sessionid"])) {
+			$this->_setSession($data["sessionid"]);
+		}
 	}
 	
 	public function _disconnectCallbackMethod($data) {
@@ -920,6 +950,32 @@ class Yunba {
 				$this->_callstack[] = $this->_callbacks[$callId];
 				unset($this->_callbacks[$callId]);
 			}
+		}
+	}
+
+	private function _getSession() {
+		$sessionFile = fopen($this->_sessionFilePath, "r");
+		if ($sessionFile) {
+			if (($line = fgets($sessionFile)) !== false) {
+				return $line;
+			} else {
+				return false;
+			}
+
+			fclose($sessionFile);
+		} else {
+			return false;
+		}
+	}
+
+	private function _setSession($sessionId) {
+		$sessionFile = fopen($this->_sessionFilePath, "w");
+		if ($sessionFile) {
+			fwrite($sessionFile, $sessionId);
+			fclose($sessionFile);
+			return true;
+		} else {
+			return false;
 		}
 	}
 }
