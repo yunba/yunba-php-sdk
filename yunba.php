@@ -634,6 +634,7 @@ class Yunba {
 	private $_qos0 = 0;
 	private $_qos1 = 1;
 	private $_qos2 = 2;
+	private $_useSessionId = false;
 	private $_sessionFilePath = "session.dat";
 	
 	/**
@@ -735,6 +736,7 @@ class Yunba {
 		if (is_callable($callback)) {
 			$this->_connectCallback = $callback;
 		}
+		$this->_useSessionId = true;
 
 		$sessionId = $this->_getSession();
 		if ($sessionId) {
@@ -859,7 +861,12 @@ class Yunba {
 				try {
 					$this->_client = new ElephantIOClient("http://" . $this->_server . ":" . $this->_port, "socket.io", 1, false, true, $this->_debug);
 					$this->init();
-					$this->connect();
+
+					if ($this->_useSessionId) {
+						$this->connect_v2();
+					} else {
+						$this->connect();
+					}
 				} catch (Exception $e) {
 					if ($this->_client) {
 						$this->_client->close();
