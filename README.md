@@ -34,7 +34,9 @@ $yunba->connect($callback = null);
 ~~~php
 $yunba->connect_v2($callback = null);
 ~~~
+
 说明
+
 功能与connect一致，不同的是此接口会将会话状态保存下来（保存到sessionFilePath中），当由于网络不稳定等原因发生重新连接后会话状态不会丢失（包括离线消息、已订阅的频道和别名）。
 
 参数
