@@ -14,6 +14,7 @@ $yunba = new Yunba(array $setup);
    * port（可选）- 服务器端口
    * appkey - 应用AppKey字符串
    * debug（可选）- 是否开启调试模式
+   * sessionFilePath（可选）- 存储会话ID的文件路径（默认为当目录下的session.dat）
 
 ### 初始化
 ~~~php
@@ -27,6 +28,15 @@ $yunba->init($initCallback = null, $recCallback = null);
 ~~~php
 $yunba->connect($callback = null);
 ~~~
+参数
+* callable $callback 连接成功或失败回调函数
+
+~~~php
+$yunba->connect_v2($callback = null);
+~~~
+说明
+功能与connect一致，不同的是此接口会将会话状态保存下来（保存到sessionFilePath中），当由于网络不稳定等原因发生重新连接后会话状态不会丢失（包括离线消息、已订阅的频道和别名）。
+
 参数
 * callable $callback 连接成功或失败回调函数
 	
