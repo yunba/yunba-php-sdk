@@ -745,7 +745,8 @@ class Yunba {
 			), $this->_connectCallback);
 		} else {
 			$this->emit("connect", array(
-				"appkey" => $this->_appKey
+				"appkey" => $this->_appKey,
+				"customid" => substr(md5(rand()), 0, 30)
 			), $this->_connectCallback);
 		}
 	}
