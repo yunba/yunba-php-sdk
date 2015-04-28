@@ -739,16 +739,15 @@ class Yunba {
 		$this->_useSessionId = true;
 
 		$sessionId = $this->_getSession();
-		if ($sessionId) {
-			$this->emit("connect", array(
-				"sessionid" => $sessionId
-			), $this->_connectCallback);
-		} else {
-			$this->emit("connect", array(
-				"appkey" => $this->_appKey,
-				"customid" => substr(md5(rand()), 0, 30)
-			), $this->_connectCallback);
+		if (!$sessionId) {
+			$sessionId = substr(md5(rand()), 0, 30);
+			$this->_setSession($sessionId);
 		}
+
+		$this->emit("connect", array(
+			"appkey" => $this->_appKey,
+			"customid" => $sessionId
+		), $this->_connectCallback);
 	}
 	
 	/**
@@ -894,10 +893,6 @@ class Yunba {
 		$callback = $this->_fetchCallback();
 		if ($callback) {
 			call_user_func($callback, $data["success"], isset($data["msg"]) ? $data["msg"] : null);
-		}
-
-		if ($data["success"] && isset($data["sessionid"])) {
-			$this->_setSession($data["sessionid"]);
 		}
 	}
 	
