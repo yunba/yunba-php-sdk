@@ -1,6 +1,8 @@
 # Yunba PHP SDK
 Yunba (http://yunba.io) SDK PHP版。
 
+### 提示：此SDK只能在cli模式下以阻塞方式运行，如果只用于发布消息推荐使用更简单的[RESTful API](http://www.yunba.io/docs2/restful_Quick_Start/)。
+
 ## API说明
 
 ### 构造器
