@@ -3,6 +3,8 @@ Yunba (http://yunba.io) SDK PHP版。
 
 ### 提示：此SDK只能在cli模式下以阻塞方式运行，如果只用于发布消息推荐使用更简单的[RESTful API](http://www.yunba.io/docs2/restful_Quick_Start/)。
 
+**声明：对于自行修改 sdk 而导致的问题，云巴恕不提供技术支持。如果对于 sdk 有个性化需求，可以联系商务定制开发：xieting@yunba.io**
+
 ## API说明
 
 ### 构造器
